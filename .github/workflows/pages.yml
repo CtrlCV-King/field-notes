@@ -18,7 +18,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - name: Import existing public site on first run
+      - name: Sync Tibet collection once
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -32,14 +32,16 @@ jobs:
                   except Exception:
                       if attempt == 3: raise
                       time.sleep(2 ** attempt)
-          if not Path('index.html').exists():
+          if not Path('index.html').exists() or 'tibet-20261017-61' not in Path('index.html').read_text(encoding='utf-8'):
               html = fetch(base).decode('utf-8')
               html = re.sub(r'<script\b[^>]*>.*?</script>', lambda m: '' if 'challenge-platform' in m.group(0) else m.group(0), html, flags=re.S)
-              assert 'const photos=' in html and '2016年10月1日' in html and '一起等一场日出' in html
+              assert 'tibet-20261017-61' in html and 'const photos=' in html and '2016年10月1日' in html and '一起等一场日出' in html
               assets = sorted(set(re.findall(r'assets/[A-Za-z0-9_./-]+\.(?:jpg|jpeg|png|webp)', html)))
-              assert len(assets) >= 107, f'Expected at least 107 images, found {len(assets)}'
+              assert len(assets) >= 137, f'Expected at least 137 images, found {len(assets)}'
               def download(asset):
                   assert '..' not in asset
+                  if Path(asset).exists() and asset != 'assets/originals/tibet-30.jpg':
+                      return
                   data = fetch(base + asset)
                   assert data[:2] == b'\xff\xd8' or data[:8] == b'\x89PNG\r\n\x1a\n', asset
                   destination = Path(asset)
@@ -60,7 +62,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html assets .nojekyll README.md
           if ! git diff --cached --quiet; then
-            git commit -m "Import complete photography site and images"
+            git commit -m "Organize Tibet collection: 61 photos"
             git push
           fi
       - name: Prepare published files
