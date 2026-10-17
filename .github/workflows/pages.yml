@@ -57,13 +57,55 @@ jobs:
           else:
               print('Using website files already saved in this repository.')
           PY
+      - name: Route images through Cloudflare CDN
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          
+          path = Path('index.html')
+          html = path.read_text(encoding='utf-8')
+          marker = '<meta name="image-cdn" content="cloudflare-v1">'
+          cdn = 'https://field-notes-zhou.dearmug64.chatgpt.site/'
+          if marker not in html:
+              bootstrap = '''<script>
+          const IMAGE_CDN = 'https://field-notes-zhou.dearmug64.chatgpt.site/';
+          function imageSource(path){return path.startsWith('assets/')?IMAGE_CDN+path:path}
+          document.addEventListener('error',function(event){
+            const img=event.target;
+            if(!(img instanceof HTMLImageElement))return;
+            const source=img.currentSrc||img.src;
+            if(source.startsWith(IMAGE_CDN)){
+              const relative=source.slice(IMAGE_CDN.length);
+              if(relative.startsWith('assets/')){
+                img.dataset.imageRoute='github-fallback';
+                img.removeAttribute('srcset');
+                img.src=relative;
+              }
+            }
+          },true);
+          </script>'''
+              head = marker + '<link rel="preconnect" href="' + cdn.rstrip('/') + '"><link rel="dns-prefetch" href="//field-notes-zhou.dearmug64.chatgpt.site">' + bootstrap
+              html = html.replace('<head>', '<head>' + head, 1)
+              html = re.sub(r'(<img\b[^>]*\bsrc=")(assets/[^"]+)(")', lambda m: m[1] + cdn + m[2] + m[3], html)
+              pattern = r"function previewSource\(p\)\{return ([^\n]+?)\}"
+              html, preview_count = re.subn(pattern, lambda m: 'function previewSource(p){return imageSource(' + m[1] + ')}', html)
+              assert preview_count == 1, 'Preview source helper changed; review CDN transform.'
+              assert 'large.src=p.src;' in html, 'Viewer source changed; review CDN transform.'
+              html = html.replace('large.src=p.src;', 'large.src=imageSource(p.src);', 1)
+              path.write_text(html, encoding='utf-8')
+          assert 'large.src=imageSource(p.src);' in html
+          assert 'function previewSource(p){return imageSource(' in html
+          assert 'github-fallback' in html
+          print('CDN images enabled; local GitHub originals remain the download and error fallback.')
+          PY
       - name: Save imported files to repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html assets .nojekyll README.md
           if ! git diff --cached --quiet; then
-            git commit -m "Confirm rock hyrax and marabou stork captions"
+            git commit -m "Enable Cloudflare image delivery with GitHub fallback"
             git push
           fi
       - name: Prepare published files
