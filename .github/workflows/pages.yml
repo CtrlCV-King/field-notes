@@ -18,7 +18,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - name: Sync single about section once
+      - name: Sync Seling Lake photo captions once
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -32,10 +32,10 @@ jobs:
                   except Exception:
                       if attempt == 3: raise
                       time.sleep(2 ** attempt)
-          if not Path('index.html').exists() or 'single-about-20261017-v5' not in Path('index.html').read_text(encoding='utf-8'):
+          if not Path('index.html').exists() or 'seling-lake-20261017-v6' not in Path('index.html').read_text(encoding='utf-8'):
               html = fetch(base).decode('utf-8')
               html = re.sub(r'<script\b[^>]*>.*?</script>', lambda m: '' if 'challenge-platform' in m.group(0) else m.group(0), html, flags=re.S)
-              assert 'single-about-20261017-v5' in html and 'const photos=' in html and 'id="notes"' not in html and 'BEHIND THE LENS' in html and '一起等一场日出' in html
+              assert 'seling-lake-20261017-v6' in html and 'const photos=' in html and 'id="notes"' not in html and 'BEHIND THE LENS' in html and '一起等一场日出' in html
               assets = sorted(set(re.findall(r'assets/[A-Za-z0-9_./-]+\.(?:jpg|jpeg|png|avif)', html)))
               assets = sorted(set(assets) | {re.sub(r'\.jpe?g$', '.avif', a.replace('/originals/', '/previews/').replace('/display/', '/previews/')) for a in assets if '/originals/' in a or '/display/' in a})
               assert len(assets) >= 275, f'Expected at least 275 images, found {len(assets)}'
@@ -63,7 +63,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html assets .nojekyll README.md
           if ! git diff --cached --quiet; then
-            git commit -m "Keep a single about section after the photo collections"
+            git commit -m "Identify Seling Lake in both lakeside portraits"
             git push
           fi
       - name: Prepare published files
