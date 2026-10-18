@@ -1,0 +1,24 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>旅程地图 · 旷野来信</title><style>
+html,body,#map{margin:0;width:100%;height:100%;font:12px/1.7 Arial,"Microsoft YaHei",sans-serif;background:#e2e4db;color:#465943}#status{position:absolute;z-index:10;left:12px;top:12px;right:70px;pointer-events:none}#status span{display:inline-block;padding:5px 9px;background:#f4f2edf2;border-radius:3px}.map-popup{padding:5px 8px}.map-popup strong{display:block;font-size:15px;margin-bottom:5px}.map-popup a{color:#465943}#retry{position:absolute;z-index:11;left:20px;top:70px;border:1px solid #a1ac94;background:#f4f2ed;padding:7px 12px;color:#465943;cursor:pointer}[hidden]{display:none!important}
+</style></head><body><div id="map" role="region" aria-label="可拖动缩放的高德旅程地图"></div><div id="status" role="status"><span>正在加载高德地图…</span></div><button id="retry" hidden onclick="location.reload()">重新加载</button><script>
+const trips={
+tibet:{zoom:5,center:[85.5,30.6],points:[['拉萨',91.1322,29.66],['羊卓雍措',90.68,28.97],['普莫雍错',90.4,28.56],['珠峰',86.925,27.988],['佩枯错',85.56,28.91],['玛旁雍错',81.46,30.67],['札达',79.8,31.48],['班公湖',79.45,33.72],['色林措',88.98,31.8],['纳木错',90.6,30.72]]},
+africa:{zoom:6,center:[36.9,-4.4],points:[['桑给巴尔岛',39.2,-6.16],['塞伦盖蒂大草原',34.83,-2.33]]},
+indonesia:{zoom:7,center:[114.3,-8.3],points:[['布罗莫火山',112.95,-7.942],['巴厘岛',115.19,-8.409],['佩妮达岛',115.55,-8.727]]}
+};
+const trip=trips[new URLSearchParams(location.search).get('trip')]||trips.tibet;
+const status=document.getElementById('status'),retry=document.getElementById('retry');let ready=false;
+function fail(){if(ready)return;status.firstElementChild.textContent='地图暂未加载，请重试或使用页面下方的高德入口。';retry.hidden=false}
+const timer=setTimeout(fail,18000);
+window._AMapSecurityConfig={securityJsCode:'8bfb82a05a359063db97d0ea25fd0901'};
+function showMap(){try{
+ const map=new AMap.Map('map',{zoom:trip.zoom,center:trip.center,viewMode:'2D',scrollWheel:false});
+ const marks=[];
+ for(const point of trip.points){const [name,lng,lat]=point;const mark=new AMap.Marker({position:[lng,lat],title:name});marks.push(mark);mark.on('click',()=>{const box=document.createElement('div');box.className='map-popup';const title=document.createElement('strong');title.textContent=name;const note=document.createElement('div');note.textContent='区域参考位置';const link=document.createElement('a');link.textContent='在高德地图查看 ↗';link.target='_blank';link.rel='noopener noreferrer';link.href='https://uri.amap.com/marker?position='+lng+','+lat+'&name='+encodeURIComponent(name)+'&coordinate=wgs84&callnative=0&src=field-notes';box.append(title,note,link);new AMap.InfoWindow({content:box,offset:new AMap.Pixel(0,-25)}).open(map,mark.getPosition())});}
+ map.add(marks);map.setFitView(marks,false,[55,35,35,35]);
+ AMap.plugin(['AMap.ToolBar','AMap.Scale'],()=>{map.addControl(new AMap.ToolBar({position:'RT'}));map.addControl(new AMap.Scale())});
+ map.on('complete',()=>{ready=true;clearTimeout(timer);retry.hidden=true;status.firstElementChild.textContent='主要地点示意 · 可拖动、缩放及点击标记';});
+ map.on('error',fail);
+}catch{fail()}}
+const sdk=document.createElement('script');sdk.src='https://webapi.amap.com/maps?v=2.0&key=e8522b43c556005ed1db2103dcfb0ad9';sdk.onload=showMap;sdk.onerror=fail;document.head.append(sdk);
+</script></body></html>
